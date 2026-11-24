@@ -24,9 +24,24 @@ cd "$SCRIPT_DIR"
 
 TESSDATA_BEST="$SCRIPT_DIR/tessdata_best"
 OUTPUT="$SCRIPT_DIR/output"
-SYSTEM_TESSDATA="/opt/homebrew/share/tessdata"
+LANGDATA="$OUTPUT/langdata"
 
-mkdir -p "$TESSDATA_BEST" "$OUTPUT"
+mkdir -p "$TESSDATA_BEST/configs" "$LANGDATA"
+
+# config for making .lstmf files, the same as tesseract's own configs/lstm.train
+cat > "$TESSDATA_BEST/configs/lstm.train" << 'CFG'
+file_type                   .bl
+textord_fast_pitch_test	T
+tessedit_zero_rejection T
+tessedit_minimal_rejection F
+tessedit_write_rep_codes F
+edges_children_fix F
+edges_childarea 0.65
+edges_boxarea 0.9
+tessedit_train_line_recognizer T
+textord_no_rejects T
+tessedit_init_config_only T
+CFG
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -141,20 +156,14 @@ echo "→ [D] Building tessdata_best/sat_base.traineddata..."
 LANGMODEL_OUT="output/langmodel_tmp"
 mkdir -p "$LANGMODEL_OUT"
 
-# combine_lang_model needs radical-stroke.txt (for CJK) — create a dummy if absent
-if [ ! -f "$SYSTEM_TESSDATA/radical-stroke.txt" ]; then
-    printf "0\n" > "$SYSTEM_TESSDATA/radical-stroke.txt"
-    echo "  Created dummy radical-stroke.txt"
-fi
-
-mkdir -p "$SYSTEM_TESSDATA/sat_base"
-touch "$SYSTEM_TESSDATA/sat_base/sat_base.config"
+# combine_lang_model wants radical-stroke.txt even though only CJK uses it
+printf "0\n" > "$LANGDATA/radical-stroke.txt"
 
 build_ok=0
 
 if combine_lang_model \
        --input_unicharset output/sat.unicharset \
-       --script_dir "$SYSTEM_TESSDATA" \
+       --script_dir "$LANGDATA" \
        --output_dir "$LANGMODEL_OUT" \
        --lang sat_base 2>/dev/null; then
     echo "  Built with compressed recoder."
@@ -165,7 +174,7 @@ if [ "$build_ok" -eq 0 ]; then
     echo "  Trying --pass_through_recoder..."
     if combine_lang_model \
            --input_unicharset output/sat.unicharset \
-           --script_dir "$SYSTEM_TESSDATA" \
+           --script_dir "$LANGDATA" \
            --output_dir "$LANGMODEL_OUT" \
            --lang sat_base \
            --pass_through_recoder 2>&1 | grep -v "^Warning\|^Failed\|^Config"; then
@@ -183,8 +192,8 @@ cp "$BUILT" "$TESSDATA_BEST/sat_base.traineddata"
 ls -lh "$TESSDATA_BEST/sat_base.traineddata"
 
 # Verify the unicharset is inside
-combine_tessdata -u "$TESSDATA_BEST/sat_base.traineddata" /tmp/sat_base_verify 2>/dev/null
-UC_COUNT=$(head -1 /tmp/sat_base_verify.lstm-unicharset | tr -d ' ')
+combine_tessdata -u "$TESSDATA_BEST/sat_base.traineddata" "$LANGMODEL_OUT/verify" >/dev/null 2>&1
+UC_COUNT=$(head -1 "$LANGMODEL_OUT/verify.lstm-unicharset" | tr -d ' ')
 echo "  Unicharset entries in sat_base.traineddata: $UC_COUNT"
 
 echo ""
@@ -198,7 +207,7 @@ echo "  Training traineddata: tessdata_best/sat_base.traineddata"
 echo ""
 echo "  NEXT STEPS:"
 echo "    1. python3 render-corpus.py       (renders synthetic images)"
-echo "    2. ./02-make-lstmf.sh             (creates .lstmf training files)"
-echo "    3. caffeinate -i ./03-train.sh    (starts training)"
+echo "    2. ./02-make-lstmf.sh             (creates .lstmf files and lstmf/list.txt)"
+echo "    3. ./03-train.sh                  (starts training)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
