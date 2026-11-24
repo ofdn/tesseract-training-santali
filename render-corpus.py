@@ -18,15 +18,16 @@ from pathlib import Path
 from PIL import Image, ImageFont, ImageDraw
 
 BASE   = Path(__file__).parent
+FONTS_DIR = BASE / "fonts"
 CORPUS = BASE / "corpus" / "sat_corpus.txt"
 OUTDIR = BASE / "rendered"
 OUTDIR.mkdir(exist_ok=True)
 
 FONTS = [
-    ("gurugomke_reg",    BASE / "GuruGomke-Regular.ttf",         36),
-    ("gurugomke_ital",   BASE / "GuruGomke-Italic.ttf",          36),
-    ("noto_olchiki_reg", BASE / "NotoSansOlChiki-Regular.ttf",   36),
-    ("noto_olchiki_bld", BASE / "NotoSansOlChiki-Bold.ttf",      36),
+    ("gurugomke_reg",    FONTS_DIR / "GuruGomke-Regular.ttf",         36),
+    ("gurugomke_ital",   FONTS_DIR / "GuruGomke-Italic.ttf",          36),
+    ("noto_olchiki_reg", FONTS_DIR / "NotoSansOlChiki-Regular.ttf",   36),
+    ("noto_olchiki_bld", FONTS_DIR / "NotoSansOlChiki-Bold.ttf",      36),
 ]
 
 PAD_X = 20
