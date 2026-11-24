@@ -159,34 +159,19 @@ mkdir -p "$LANGMODEL_OUT"
 # combine_lang_model wants radical-stroke.txt even though only CJK uses it
 printf "0\n" > "$LANGDATA/radical-stroke.txt"
 
-build_ok=0
-
-if combine_lang_model \
-       --input_unicharset output/sat.unicharset \
-       --script_dir "$LANGDATA" \
-       --output_dir "$LANGMODEL_OUT" \
-       --lang sat_base 2>/dev/null; then
-    echo "  Built with compressed recoder."
-    build_ok=1
-fi
-
-if [ "$build_ok" -eq 0 ]; then
-    echo "  Trying --pass_through_recoder..."
-    if combine_lang_model \
-           --input_unicharset output/sat.unicharset \
-           --script_dir "$LANGDATA" \
-           --output_dir "$LANGMODEL_OUT" \
-           --lang sat_base \
-           --pass_through_recoder 2>&1 | grep -v "^Warning\|^Failed\|^Config"; then
-        echo "  Built with pass-through recoder."
-        build_ok=1
-    fi
-fi
-
-[ "$build_ok" -eq 1 ] || { echo "ERROR: combine_lang_model failed."; exit 1; }
+# Ol Chiki needs one code per character, so a pass-through recoder
+rm -rf "$LANGMODEL_OUT/sat_base"
+mkdir -p "$LANGMODEL_OUT/sat_base"
+combine_lang_model \
+    --input_unicharset output/sat.unicharset \
+    --script_dir "$LANGDATA" \
+    --output_dir "$LANGMODEL_OUT" \
+    --lang sat_base \
+    --pass_through_recoder > "$LANGMODEL_OUT/build.log" 2>&1
 
 BUILT="$LANGMODEL_OUT/sat_base/sat_base.traineddata"
-[ -f "$BUILT" ] || { echo "ERROR: expected $BUILT not created."; exit 1; }
+combine_tessdata -d "$BUILT" 2>&1 | grep -q lstm-recoder || {
+    echo "ERROR: $BUILT has no recoder, see $LANGMODEL_OUT/build.log"; exit 1; }
 
 cp "$BUILT" "$TESSDATA_BEST/sat_base.traineddata"
 ls -lh "$TESSDATA_BEST/sat_base.traineddata"
