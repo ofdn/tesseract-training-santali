@@ -1,22 +1,8 @@
 #!/bin/bash
-# 01-prep-base.sh
-#
-# One-time setup for Santali LSTM training.
-#
-# What this does:
-#   A. Downloads tessdata_best/Latin.traineddata (LSTM base for fine-tuning)
-#   B. Extracts output/latin.lstm (the raw LSTM weights)
-#   C. Creates output/sat.unicharset (full Ol Chiki block + punctuation)
-#   D. Builds tessdata_best/sat_base.traineddata via combine_lang_model
-#      (this traineddata is used ONLY for encoding GT during lstmf creation
-#       and as the --traineddata argument for lstmtraining)
-#
-# Why Latin?
-#   Ol Chiki is an alphabet, so Latin's LSTM is a closer start than an
-#   abugida like Odia. The output layer is rebuilt for Ol Chiki.
-#   Expect BCER to start ~50% (output layer rebuild) then drop rapidly.
-#
-# Run once before any training. Safe to re-run.
+# Downloads Latin.traineddata, extracts output/latin.lstm, writes the
+# Ol Chiki unicharset and builds tessdata_best/sat_base.traineddata.
+# Ol Chiki is an alphabet, so Latin is a closer start than an abugida
+# like Odia. Safe to run again.
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -76,14 +62,8 @@ python3 << 'PYEOF'
 from pathlib import Path
 
 # Full Ol Chiki Unicode block U+1C50–U+1C7F
-# U+1C50-1C59: Digits (property 0 — not IsAlpha)
-# U+1C5A-1C77: Letters (property 1 — IsAlpha)
-# U+1C78-1C7D: Signs/modifiers (property 0)
-# U+1C7E-1C7F: Punctuation (property 10)
-# Plus common ASCII punct used alongside Ol Chiki text
 
 entries = [
-    # (char, props, direction, script, type_suffix)
 ]
 
 # Ol Chiki digits
