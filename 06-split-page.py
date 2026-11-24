@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-06-scan-to-lstmf.py
+06-split-page.py
 
-Splits a scanned page + ground-truth text file into individual line
-training pairs and converts them to .lstmf files with linebox.py.
+Splits a scanned page + ground-truth text file into line images and
+.gt.txt files in ground-truth/. Check the pairs, then run 02-make-lstmf.sh.
 
 Usage:
-  python3 06-scan-to-lstmf.py <image> <gt.txt> [--prefix ganam]
+  python3 06-split-page.py <image> <gt.txt> [--prefix ganam]
 """
 
 import argparse
@@ -16,10 +16,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from linebox import make_lstmf
-
 # paths, relative to the repo root
-SCAN_LSTMF    = Path("lstmf/scan")
+GT_DIR        = Path("ground-truth")
 
 # Line detection
 ROW_THR      = 0.05   # fraction of row-max to count as text row
@@ -113,14 +111,12 @@ def main():
             print(f"    {i+1:2d}: {ln[:60]}")
         sys.exit(1)
 
-    SCAN_LSTMF.mkdir(parents=True, exist_ok=True)
-
-    ok = fail = 0
+    GT_DIR.mkdir(parents=True, exist_ok=True)
 
     print()
     for idx, ((y0, y1, _), gt_text) in enumerate(zip(kept, gt_lines)):
         name     = f"{prefix}_line{idx+1:04d}"
-        png_path = SCAN_LSTMF / f"{name}.png"
+        png_path = GT_DIR / f"{name}.png"
 
         # Crop line with padding, upscale 2×
         H_orig, W_orig = gray_arr.shape
@@ -134,15 +130,10 @@ def main():
         line_img.save(str(png_path))
 
         png_path.with_suffix('.gt.txt').write_text(gt_text + '\n', encoding='utf-8')
-        if make_lstmf(png_path, gt_text):
-            ok += 1
-            preview = gt_text[:55] + ('…' if len(gt_text) > 55 else '')
-            print(f"  OK  {name}  {preview}")
-        else:
-            fail += 1
-            print(f"  FAIL {name}")
+        preview = gt_text[:55] + ('…' if len(gt_text) > 55 else '')
+        print(f"  {name}  {preview}")
 
-    print(f"\n  Done: {ok} OK, {fail} failed")
+    print(f"\n  Done: {len(kept)} lines in {GT_DIR}/")
     print()
 
 if __name__ == '__main__':
